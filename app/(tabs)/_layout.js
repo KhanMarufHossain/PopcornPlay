@@ -23,6 +23,7 @@ const _layout = () => {
         },
         headerStyle: {
           backgroundColor: '#1A1A2E',
+          height: 80,
         },
         headerTintColor: '#FFFFFF',
         headerTitleStyle: {
