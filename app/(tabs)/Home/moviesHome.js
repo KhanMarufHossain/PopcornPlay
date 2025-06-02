@@ -1,12 +1,12 @@
 import { View, Text } from 'react-native'
 import React from 'react'
 
-const tvShows = () => {
+const moviesHome = () => {
   return (
     <View>
-      <Text>tvShows</Text>
+      <Text>moviesHome</Text>
     </View>
   )
 }
 
-export default tvShows
+export default moviesHome
