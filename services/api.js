@@ -17,7 +17,7 @@ export const showMovies = async () => {
       headers: TMDB_CONFIG.headers,
     });
 
-    return response.data.results;
+    return  {movies : response.data.results};
   } catch (error) {
     const statusText =
       error.response?.statusText || error.message || "Unknown Error";
