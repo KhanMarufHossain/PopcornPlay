@@ -1,6 +1,21 @@
 import { View, Text, FlatList, Image, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, memo } from 'react';
 import { showMovies } from '../../../services/api';
+
+// Separate, memoized component for movie cards
+const MovieCard = memo(({ movie }) => (
+  <TouchableOpacity style={styles.movieCard}>
+    <Image 
+      source={{ uri: movie.posterUrl }}
+      style={styles.poster}
+      resizeMode="cover"
+    />
+    <View style={styles.movieInfo}>
+      <Text style={styles.title} numberOfLines={2}>{movie.title}</Text>
+      <Text style={styles.rating}>⭐ {movie.vote_average.toFixed(1)}</Text>
+    </View>
+  </TouchableOpacity>
+));
 
 const MoviesHome = () => {
   const [data, setData] = useState({
@@ -12,11 +27,10 @@ const MoviesHome = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const fetchMovies = async (page = 1, shouldAppend = false) => {
+  const fetchMovies = useCallback(async (page = 1, shouldAppend = false) => {
     setLoading(true);
     try {
       const result = await showMovies(page);
-      
       if (shouldAppend) {
         setData(prevData => ({
           ...result,
@@ -25,7 +39,6 @@ const MoviesHome = () => {
       } else {
         setData(result);
       }
-      
       setError(null);
     } catch (err) {
       console.error('Error fetching movies:', err);
@@ -33,32 +46,29 @@ const MoviesHome = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchMovies(1);
-  }, []);
+  }, [fetchMovies]);
 
-  const renderMovieCard = ({ item }) => (
-    <TouchableOpacity style={styles.movieCard}>
-      {/* Using the processed image URL directly */}
-      <Image 
-        source={{ uri: item.posterUrl }}
-        style={styles.poster}
-        resizeMode="cover"
-      />
-      <View style={styles.movieInfo}>
-        <Text style={styles.title} numberOfLines={2}>{item.title}</Text>
-        <Text style={styles.rating}>⭐ {item.vote_average.toFixed(1)}</Text>
-      </View>
-    </TouchableOpacity>
-  );
+  const renderMovieCard = useCallback(({ item }) => (
+    <MovieCard movie={item} />
+  ), []);
 
-  const handleLoadMore = () => {
+  const handleLoadMore = useCallback(() => {
     if (data.currentPage < data.totalPages && !loading) {
       fetchMovies(data.currentPage + 1, true);
     }
-  };
+  }, [data.currentPage, data.totalPages, loading, fetchMovies]);
+
+  const getItemLayout = useCallback((_, index) => ({
+    length: 270, // Approximate height of item + margins
+    offset: 270 * Math.floor(index / 2), // Account for 2 columns
+    index,
+  }), []);
+
+  const keyExtractor = useCallback((item) => item.id.toString(), []);
 
   if (loading && data.movies.length === 0) {
     return (
@@ -83,11 +93,20 @@ const MoviesHome = () => {
       <FlatList
         data={data.movies}
         renderItem={renderMovieCard}
-        keyExtractor={(item) => item.id.toString()}
+        keyExtractor={keyExtractor}
         numColumns={2}
         contentContainerStyle={styles.movieList}
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
+        
+        // Performance optimizations
+        windowSize={5}
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={10}
+        updateCellsBatchingPeriod={50}
+        initialNumToRender={10}
+        getItemLayout={getItemLayout}
+        
         ListFooterComponent={
           loading && data.movies.length > 0 ? (
             <ActivityIndicator size="small" color="#FF2E63" style={styles.loader} />
